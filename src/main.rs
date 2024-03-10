@@ -39,7 +39,7 @@ fn main() {
 
     let dl = Youtube::new();
 
-    let videos = match dl.fetch_url(video_id.as_str()) {
+    let youtube_video = match dl.fetch_url(video_id.as_str()) {
         Ok(v) => v,
         Err(e) => {
             println!("fetch url error\n{:?}", e);
@@ -47,17 +47,7 @@ fn main() {
         },
     };
     
-    println!("\nvideo formats list:");
-    let mut index = 1;
-    for video in &videos {
-        println!("{index}) {}x{}, len:{:?}, duration: {}", 
-            video.width, 
-            video.height, 
-            video.content_length, 
-            video.approx_duration_ms
-        );
-        index = index + 1;
-    }
+    println!("{youtube_video}");
 
     println!("please input the index, which format you want:\n");
     let mut select_index_input = String::new();
@@ -70,10 +60,10 @@ fn main() {
     match select_index.parse::<usize>() {
         Ok(index) => {
             let index = index - 1;
-            if index < videos.len() {
-                println!("{}", videos[index].url);
+            if index < youtube_video.formats_count() {
+                println!("{}", youtube_video.format_url(index).unwrap_or("no url"));
             } else {
-                println!("{} not in [{}-{})", index + 1, 1, videos.len());
+                println!("{} not in [{}-{})", index + 1, 1, youtube_video.formats_count());
             }
         },
         Err(e) => {

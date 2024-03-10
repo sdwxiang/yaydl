@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Debug };
+use std::{error::Error, fmt::{Debug, Display} };
 
 use reqwest::blocking;
 use serde::Deserialize;
@@ -8,7 +8,14 @@ use url::Url;
 #[derive(Debug, Deserialize)]
 struct PlayerResponse {
     #[serde(rename="streamingData")]
-    streaming_data: StreamingData
+    streaming_data: StreamingData,
+    #[serde(rename="videoDetails")]
+    video_details: VideoDetail,
+}
+
+#[derive(Debug, Deserialize)]
+struct VideoDetail {
+    title: String
 }
 
 #[derive(Debug, Deserialize)]
@@ -17,15 +24,56 @@ struct StreamingData {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct VideoFormat {
-    pub url: String,
-    pub height: u32,
-    pub width: u32,
+struct VideoFormat {
+    url: String,
+    height: u32,
+    width: u32,
     // #[serde(default)]
     #[serde(rename="contentLength")]
-    pub content_length: Option<String>,
+    content_length: Option<String>,
     #[serde(rename="approxDurationMs")]
-    pub approx_duration_ms: String
+    approx_duration_ms: String
+}
+
+pub struct YoutubeVideo {
+    title: String,
+    formats: Vec<VideoFormat>
+}
+
+impl YoutubeVideo {
+    pub fn title(&self) -> &str{
+        &self.title
+    }
+
+    pub fn formats_count(&self) -> usize {
+        self.formats.len()
+    }
+
+    pub fn format_url(&self, index: usize) -> Option<&str> {
+        if index < self.formats.len() {
+            Some(&self.formats[index].url)
+        } else {
+            None
+        }
+    }
+}
+
+impl Display for YoutubeVideo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "title: {}\n", self.title)?;
+        write!(f, "\nvideo formats list:\n")?;
+        let mut index = 1;
+        for video in &self.formats {
+            write!(f, "{index}) {}x{}, len:{:?}, duration: {}\n", 
+                video.width, 
+                video.height, 
+                video.content_length, 
+                video.approx_duration_ms
+            )?;
+            index = index + 1;
+        }
+        Ok(())
+    }
 }
 
 pub struct Youtube {
@@ -45,7 +93,7 @@ impl Youtube {
     /// request video information
     /// 
     /// test id TgoYoc8oBFw
-    pub fn fetch_url(&self, video_id: &str) -> Result<Vec<VideoFormat>, Box<dyn Error>> {
+    pub fn fetch_url(&self, video_id: &str) -> Result<YoutubeVideo, Box<dyn Error>> {
         let query = json!(
             {
                 "videoId": video_id, 
@@ -76,8 +124,17 @@ impl Youtube {
             },
         };
 
+        // println!("\n{}\n", response_text);
+
         match serde_json::from_str::<PlayerResponse>(response_text.as_str()) {
-            Ok(player_response) => Ok(player_response.streaming_data.formats),
+            Ok(player_response) => {
+                Ok(
+                    YoutubeVideo {
+                        formats: player_response.streaming_data.formats,
+                        title: player_response.video_details.title
+                    }
+                )
+            },
             Err(e) => {
                 println!("\nparse response txt failed\n\n{}", response_text);
                 Err(e.into())
