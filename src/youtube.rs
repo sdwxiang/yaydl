@@ -1,8 +1,9 @@
-use std::{error::Error, fmt::Debug};
+use std::{error::Error, fmt::Debug };
 
 use reqwest::blocking;
 use serde::Deserialize;
 use serde_json::json;
+use url::Url;
 
 #[derive(Debug, Deserialize)]
 struct PlayerResponse {
@@ -41,8 +42,9 @@ impl Youtube {
         }
     }
 
+    /// request video information
+    /// 
     /// test id TgoYoc8oBFw
-    /// https://www.youtube.com/watch?v=vzf_VGhZPI4
     pub fn fetch_url(&self, video_id: &str) -> Result<Vec<VideoFormat>, Box<dyn Error>> {
         let query = json!(
             {
@@ -51,8 +53,8 @@ impl Youtube {
                 {
                     "client":
                     {
-                        "clientName":Self::POST.client_name,
-                        "clientVersion":Self::POST.client_version
+                        "clientName": Self::POST.client_name,
+                        "clientVersion": Self::POST.client_version
                     }
                 },
                 "params":"CgIQBg=="
@@ -84,7 +86,39 @@ impl Youtube {
     }
 }
 
+/// fetch video id from url
+pub fn fetch_id_from_url(url: &str) -> Result<String, Box<dyn Error>> {
+    let u = Url::parse(url)?;
+    let host = u.host_str().unwrap_or("");
+    let path = u.path();
+    let query = u.query_pairs();
+
+    if !(host.contains("youtube.com") || host.contains("youtu.be")) {
+        return Err("not youtube url".into());
+    }
+
+    let mut has_si_param = false;
+    for (key, val) in query {
+        if key == "v" {
+            return Ok(val.to_string());
+        } else if key == "si" {
+           has_si_param = true;
+        }
+    }
+
+    if has_si_param {
+        if let Some(id) = path.find("/") {
+            return Ok(path[id + 1 ..].to_string());
+        }
+    }
+    
+    Err("no video id found".into())
+}
+
+/// youtube rquest paramemters
+/// 
 /// 2024.3.10 replace android with web. because android didn't work. change version, also work!!!
+/// 
 /// 2024.3.10
 struct Post {
     url: &'static str,
@@ -108,3 +142,21 @@ const WEB_POST: Post = Post {
     client_name: "WEB",
     client_version: "2.20220801.00.00"
 };
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    /// ```
+    /// https://www.youtube.com/watch?v=sgNS56c1K30 377MB
+    /// https://youtu.be/sgNS56c1K30?si=PQhW2mDPsaAvvYuj 377MB
+    /// https://youtu.be/duIfgZkp9Lc?si=4_k4A6BSbt1-JjpU 20MB
+    /// ```
+    fn fetch_id_from_url_test() {
+        let id = super::fetch_id_from_url("https://www.youtube.com/watch?v=sgNS56c1K30").unwrap();
+        assert_eq!(id.as_str(), "sgNS56c1K30");
+        let id = super::fetch_id_from_url("https://youtu.be/sgNS56c1K30?si=PQhW2mDPsaAvvYuj").unwrap();
+        assert!(id.as_str() == "sgNS56c1K30");
+        let id = super::fetch_id_from_url("https://youtu.be?si=PQhW2mDPsaAvvYuj").unwrap();
+        assert!(id.as_str() == "");
+    }
+}
