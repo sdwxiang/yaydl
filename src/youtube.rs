@@ -32,8 +32,7 @@ pub struct Youtube {
 }
 
 impl Youtube {
-    const URL: &'static str = "https://www.youtube.com/youtubei/v1/player?key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w";
-
+    const POST: &'static Post = &ANDROID_POST;
     pub fn new() -> Self {
         let http_client = blocking::Client::new();
 
@@ -43,6 +42,7 @@ impl Youtube {
     }
 
     /// test id TgoYoc8oBFw
+    /// https://www.youtube.com/watch?v=vzf_VGhZPI4
     pub fn fetch_url(&self, video_id: &str) -> Result<Vec<VideoFormat>, Box<dyn Error>> {
         let query = json!(
             {
@@ -51,15 +51,15 @@ impl Youtube {
                 {
                     "client":
                     {
-                        "clientName":"ANDROID",
-                        "clientVersion":"17.31.35"
+                        "clientName":Self::POST.client_name,
+                        "clientVersion":Self::POST.client_version
                     }
                 },
                 "params":"CgIQBg=="
             }
         );
         let query_str = query.to_string();
-        let request = self.http_client.post(Self::URL).body(query_str);
+        let request = self.http_client.post(Self::POST.url).body(query_str);
         let response = match request.send() {
             Ok(r) => r,
             Err(e) => {
@@ -81,6 +81,30 @@ impl Youtube {
                 Err(e.into())
             },
         }
-        // println!("{video_id}, {:?}", r);
     }
 }
+
+/// 2024.3.10 replace android with web. because android didn't work. change version, also work!!!
+/// 2024.3.10
+struct Post {
+    url: &'static str,
+    /// youtube client name: android, web
+    client_name: &'static str,
+    /// youtube client version
+    client_version: &'static str
+}
+
+#[allow(dead_code)]
+const ANDROID_POST: Post = Post {
+    url: "https://www.youtube.com/youtubei/v1/player?key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w",
+    client_name: "ANDROID",
+    // 2024.3.10 change 17.31.35 to 19.09.37, because old version didn't work.
+    client_version: "19.09.37"
+};
+
+#[allow(dead_code)]
+const WEB_POST: Post = Post {
+    url: "https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
+    client_name: "WEB",
+    client_version: "2.20220801.00.00"
+};
