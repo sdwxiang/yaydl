@@ -48,14 +48,34 @@ fn main() {
     };
     
     let mut index = 1;
-    for video in videos {
-        println!("{index}) {}x{}, len:{:?}, duration: {}\n{}", 
-        video.width, 
-        video.height, 
-        video.content_length, 
-        video.approx_duration_ms,
-        video.url
+    for video in &videos {
+        println!("{index}) {}x{}, len:{:?}, duration: {}", 
+            video.width, 
+            video.height, 
+            video.content_length, 
+            video.approx_duration_ms
         );
         index = index + 1;
+    }
+
+    let mut select_index_input = String::new();
+    if let Err(e) = std::io::stdin().read_line(&mut select_index_input) {
+        println!("read input index failed: {:?}", e);
+        process::exit(1);
+    }
+    let select_index = select_index_input.trim_end();
+
+    match select_index.parse::<usize>() {
+        Ok(index) => {
+            let index = index - 1;
+            if index < videos.len() {
+                println!("{}", videos[index].url);
+            } else {
+                println!("{} not in [{}-{})", index + 1, 1, videos.len());
+            }
+        },
+        Err(e) => {
+            println!("parse input index error.({})", e);
+        },
     }
 }
