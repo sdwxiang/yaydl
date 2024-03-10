@@ -7,8 +7,8 @@ use argh::FromArgs;
 #[derive(FromArgs)]
 struct CmdParam {
     /// youtube url
-    #[argh(option, short='u')]
-    url: Option<String>,
+    // #[argh(option, short='u')]
+    // url: Option<String>,
     /// youture ids
     #[argh(positional, greedy)]
     ids: Vec<String>,
@@ -17,20 +17,20 @@ struct CmdParam {
 fn main() {
     let args: CmdParam = argh::from_env();
     let mut video_id: String = "".into();
-    if args.ids.len() == 0 {
-        if let Some(url) = args.url {
-            match fetch_id_from_url(url.as_str()) {
-                Ok(id) => {
-                    video_id = id;
-                },
-                Err(e) => {
-                    println!("fetch id from url failed: {:?}", e);
-                },
-            }
+    if args.ids.len() == 0 || args.ids[0].contains("youtu") {
+        match fetch_id_from_url(args.ids[0].as_str()) {
+            Ok(id) => {
+                video_id = id;
+            },
+            Err(e) => {
+                println!("fetch id from url failed: {:?}", e);
+            },
         }
     } else {
         video_id = args.ids[0].clone();
     }
+
+    println!("input video_id: ({})", video_id);
 
     if video_id.len() == 0 {
         println!("no video id found, please check input");
@@ -47,6 +47,7 @@ fn main() {
         },
     };
     
+    println!("\nvideo formats list:");
     let mut index = 1;
     for video in &videos {
         println!("{index}) {}x{}, len:{:?}, duration: {}", 
@@ -58,6 +59,7 @@ fn main() {
         index = index + 1;
     }
 
+    println!("please input the index, which format you want:\n");
     let mut select_index_input = String::new();
     if let Err(e) = std::io::stdin().read_line(&mut select_index_input) {
         println!("read input index failed: {:?}", e);
