@@ -1,6 +1,10 @@
 use std::process;
 
-use yaydl::{ youtube::{ Youtube, fetch_id_from_url }, read_input_index };
+use yaydl::{ 
+    youtube::{ Youtube, fetch_id_from_url }, 
+    read_input_index,
+    open_url
+};
 use argh::FromArgs;
 
 /// youtube dl command
@@ -54,6 +58,7 @@ fn main() {
         Ok(index) => {
             if let Some(url) = youtube_video.format_url(index - 1) {
                 println!("{url}");
+                open_url(url);
             } else {
                 println!("{} not in [1-{}]", index, youtube_video.formats_count());
             }
