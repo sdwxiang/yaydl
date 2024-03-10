@@ -82,6 +82,7 @@ pub struct Youtube {
 
 impl Youtube {
     const POST: &'static Post = &ANDROID_POST;
+
     pub fn new() -> Self {
         let http_client = blocking::Client::new();
 
@@ -91,8 +92,6 @@ impl Youtube {
     }
 
     /// request video information
-    /// 
-    /// test id TgoYoc8oBFw
     pub fn fetch_url(&self, video_id: &str) -> Result<YoutubeVideo, Box<dyn Error>> {
         let query = json!(
             {

@@ -1,6 +1,6 @@
 use std::process;
 
-use yaydl::youtube::{ Youtube, fetch_id_from_url };
+use yaydl::{ youtube::{ Youtube, fetch_id_from_url }, read_input_index };
 use argh::FromArgs;
 
 /// youtube dl command
@@ -50,20 +50,12 @@ fn main() {
     println!("{youtube_video}");
 
     println!("please input the index, which format you want:\n");
-    let mut select_index_input = String::new();
-    if let Err(e) = std::io::stdin().read_line(&mut select_index_input) {
-        println!("read input index failed: {:?}", e);
-        process::exit(1);
-    }
-    let select_index = select_index_input.trim_end();
-
-    match select_index.parse::<usize>() {
+    match read_input_index() {
         Ok(index) => {
-            let index = index - 1;
-            if index < youtube_video.formats_count() {
-                println!("{}", youtube_video.format_url(index).unwrap_or("no url"));
+            if let Some(url) = youtube_video.format_url(index - 1) {
+                println!("{url}");
             } else {
-                println!("{} not in [{}-{})", index + 1, 1, youtube_video.formats_count());
+                println!("{} not in [1-{}]", index, youtube_video.formats_count());
             }
         },
         Err(e) => {
