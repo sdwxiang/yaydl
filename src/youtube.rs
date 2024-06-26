@@ -80,9 +80,9 @@ pub struct Youtube {
     http_client: blocking::Client
 }
 
-impl Youtube {
-    const POST: &'static Post = &ANDROID_POST;
+const POST: &'static Post = &ANDROID_POST;
 
+impl Youtube {
     pub fn new() -> Self {
         let http_client = blocking::Client::new();
 
@@ -93,22 +93,8 @@ impl Youtube {
 
     /// request video information
     pub fn fetch_url(&self, video_id: &str) -> Result<YoutubeVideo, Box<dyn Error>> {
-        let query = json!(
-            {
-                "videoId": video_id, 
-                "context":
-                {
-                    "client":
-                    {
-                        "clientName": Self::POST.client_name,
-                        "clientVersion": Self::POST.client_version
-                    }
-                },
-                "params":"CgIQBg=="
-            }
-        );
-        let query_str = query.to_string();
-        let request = self.http_client.post(Self::POST.url).body(query_str);
+        let request = self.http_client.post(POST.url).body(request_body_for_id(video_id));
+        
         let response = match request.send() {
             Ok(r) => r,
             Err(e) => {
@@ -122,23 +108,42 @@ impl Youtube {
                 return Err(e.into());
             },
         };
+        response_to_videos(response_text.as_str())
+    }
+}
 
-        // println!("\n{}\n", response_text);
-
-        match serde_json::from_str::<PlayerResponse>(response_text.as_str()) {
-            Ok(player_response) => {
-                Ok(
-                    YoutubeVideo {
-                        formats: player_response.streaming_data.formats,
-                        title: player_response.video_details.title
-                    }
-                )
+pub fn request_body_for_id(video_id: &str) -> String {
+    let query = json!(
+        {
+            "videoId": video_id, 
+            "context":
+            {
+                "client":
+                {
+                    "clientName": POST.client_name,
+                    "clientVersion": POST.client_version
+                }
             },
-            Err(e) => {
-                println!("\nparse response txt failed\n\n{}", response_text);
-                Err(e.into())
-            },
+            "params":"CgIQBg=="
         }
+    );
+    query.to_string()
+}
+
+pub fn response_to_videos(response_text: &str) -> Result<YoutubeVideo, Box<dyn Error>> {
+    match serde_json::from_str::<PlayerResponse>(response_text) {
+        Ok(player_response) => {
+            Ok(
+                YoutubeVideo {
+                    formats: player_response.streaming_data.formats,
+                    title: player_response.video_details.title
+                }
+            )
+        },
+        Err(e) => {
+            println!("\nparse response txt failed\n\n{}", response_text);
+            Err(e.into())
+        },
     }
 }
 

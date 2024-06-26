@@ -1,6 +1,6 @@
 use std::process;
 
-use yaydl::{ 
+use yaydl_lib::{ 
     youtube::{ Youtube, fetch_id_from_url }, 
     read_input_index,
     open_url
