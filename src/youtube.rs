@@ -1,6 +1,10 @@
 use std::{error::Error, fmt::{Debug, Display} };
 
+#[cfg(feature="blocking")]
 use reqwest::blocking;
+#[cfg(not(feature="blocking"))]
+use reqwest;
+
 use serde::Deserialize;
 use serde_json::json;
 use url::Url;
@@ -77,12 +81,17 @@ impl Display for YoutubeVideo {
 }
 
 pub struct Youtube {
-    http_client: blocking::Client
+    #[cfg(feature="blocking")]
+    http_client: blocking::Client,
+
+    #[cfg(not(feature="blocking"))]
+    http_client: reqwest::Client
 }
 
 const POST: &'static Post = &ANDROID_POST;
 
 impl Youtube {
+    #[cfg(feature="blocking")]
     pub fn new() -> Self {
         let http_client = blocking::Client::new();
 
@@ -91,6 +100,16 @@ impl Youtube {
         }
     }
 
+    #[cfg(not(feature="blocking"))]
+    pub fn new() -> Self {
+        let http_client = reqwest::Client::new();
+
+        Self{
+            http_client
+        }
+    }
+
+    #[cfg(feature="blocking")]
     /// request video information
     pub fn fetch_url(&self, video_id: &str) -> Result<YoutubeVideo, Box<dyn Error>> {
         let request = self.http_client.post(POST.url).body(request_body_for_id(video_id));
@@ -103,6 +122,27 @@ impl Youtube {
         };
 
         let response_text = match response.text() {
+            Ok(t) => t,
+            Err(e) => {
+                return Err(e.into());
+            },
+        };
+        response_to_videos(response_text.as_str())
+    }
+
+    #[cfg(not(feature="blocking"))]
+    /// request video information
+    pub async fn fetch_url(&self, video_id: &str) -> Result<YoutubeVideo, Box<dyn Error>> {
+        let request = self.http_client.post(POST.url).body(request_body_for_id(video_id));
+        
+        let response = match request.send().await {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(e.into());
+            }
+        };
+
+        let response_text = match response.text().await {
             Ok(t) => t,
             Err(e) => {
                 return Err(e.into());
@@ -141,7 +181,7 @@ pub fn response_to_videos(response_text: &str) -> Result<YoutubeVideo, Box<dyn E
             )
         },
         Err(e) => {
-            println!("\nparse response txt failed\n\n{}", response_text);
+            // println!("\nparse response txt failed\n\n{}", response_text);
             Err(e.into())
         },
     }
