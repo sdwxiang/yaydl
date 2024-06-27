@@ -80,11 +80,13 @@ impl Display for YoutubeVideo {
     }
 }
 
+#[cfg(feature="blocking")]
 pub struct Youtube {
-    #[cfg(feature="blocking")]
-    http_client: blocking::Client,
+    http_client: blocking::Client
+}
 
-    #[cfg(not(feature="blocking"))]
+#[cfg(not(feature="blocking"))]
+pub struct Youtube {
     http_client: reqwest::Client
 }
 
