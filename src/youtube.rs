@@ -5,7 +5,7 @@ use reqwest::blocking;
 #[cfg(not(feature="blocking"))]
 use reqwest;
 
-use serde::Deserialize;
+use serde::{ Deserialize, Serialize };
 use serde_json::json;
 use url::Url;
 
@@ -27,7 +27,7 @@ struct StreamingData {
     formats: Vec<VideoFormat>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct VideoFormat {
     url: String,
     height: u32,
@@ -39,6 +39,7 @@ struct VideoFormat {
     approx_duration_ms: String
 }
 
+#[derive(Debug, Serialize)]
 pub struct YoutubeVideo {
     title: String,
     formats: Vec<VideoFormat>
